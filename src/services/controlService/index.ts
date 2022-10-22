@@ -10,10 +10,10 @@ const controls : ControlList = {
   },
 }
 
+rpio.open(7, rpio.OUTPUT)
+
 const getControlStatus = (control: Control) : ControlStatus => {
-  rpio.open(control.pin, rpio.INPUT, rpio.PULL_DOWN)
   var state = rpio.read(control.pin)
-  rpio.close(control.pin, rpio.PIN_PRESERVE)
 
   return {
     control,
@@ -22,9 +22,7 @@ const getControlStatus = (control: Control) : ControlStatus => {
 }
 
 const setControlStatus = (control: Control, status: Status) => {
-  rpio.open(control.pin, rpio.OUTPUT)
   var state = rpio.write(control.pin, status === Status.active ? rpio.HIGH : rpio.LOW)
-  rpio.close(control.pin, rpio.PIN_PRESERVE)
 }
 
 export const routes = (router: KoaRouter) => {
