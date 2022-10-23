@@ -28,11 +28,11 @@ Returns current state of GPIO pin for the control lower-temperature
 
 Returns the currently desired state of the control lower-temperature based on the schedule (no explicit schedule = inactive)
 
-#### GET http://localhost:8000/schedule/lower-temperature
+#### GET http://raspberry.local:8000/schedule/lower-temperature
 
 Returns all current and future schedules for the control lower-temperature
 
-#### POST http://heatcontrol.local:8000/schedule/lower-temperature
+#### POST http://raspberry.local:8000/schedule/lower-temperature
 
 Inserts a schedule for the control lower-temperature.
 
