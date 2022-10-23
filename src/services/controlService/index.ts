@@ -1,7 +1,7 @@
 import KoaRouter from '@koa/router'
 import rpio from 'rpio'
 
-import { Control, ControlStatus, Status, ControlList } from '../../common/types'
+import { Control, ControlState, State, ControlList } from '../../common/types'
 
 const controls : ControlList = {
   'lower-temperature': {
@@ -10,19 +10,41 @@ const controls : ControlList = {
   },
 }
 
-rpio.open(7, rpio.OUTPUT)
+Object.values(controls).forEach(control => {
+  console.log('Opening', control)
 
-const getControlStatus = (control: Control) : ControlStatus => {
+  if (!control.pin) {
+    throw new Error('Control cannot be opened, pin is null')
+  }
+
+  rpio.open(control.pin, rpio.OUTPUT)
+})
+
+const getControlState = (control: Control) : ControlState => {
+  if (!control.pin) {
+    throw new Error('Control cannot be opened, pin is null')
+  }
+
   var state = rpio.read(control.pin)
 
   return {
     control,
-    status: state ? Status.active : Status.inactive,
+    state: state ? State.active : State.inactive,
   }
 }
 
-const setControlStatus = (control: Control, status: Status) => {
-  var state = rpio.write(control.pin, status === Status.active ? rpio.HIGH : rpio.LOW)
+const setControlState = (control: Control, status: State) => {
+  if (!control.pin) {
+    throw new Error('Control cannot be opened, pin is null')
+  }
+
+  rpio.write(control.pin, status === State.active ? rpio.HIGH : rpio.LOW)
+}
+
+export {
+  getControlState,
+  setControlState,
+  controls
 }
 
 export const routes = (router: KoaRouter) => {
@@ -42,7 +64,7 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const status = getControlStatus(control)
+    const status = getControlState(control)
     ctx.body = status
   })
 
@@ -72,7 +94,7 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    setControlStatus(control, params.status === '1' ? Status.active : Status.inactive)
+    setControlState(control, params.status === '1' ? State.active : State.inactive)
     ctx.body = { operation: 'ok' }
   })
 }

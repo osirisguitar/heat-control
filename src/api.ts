@@ -1,6 +1,8 @@
 import KoaRouter from '@koa/router';
+import { setIntervalAsync, clearIntervalAsync } from 'set-interval-async'
 
-import { routes as controlRoutes } from './services/controlService'
+import { routes as controlRoutes, controls, getControlState, setControlState } from './services/controlService'
+import { routes as scheduleRoutes, getDesiredControlState } from './services/scheduleService'
 
 const router = new KoaRouter();
 
@@ -14,5 +16,24 @@ router.post('/', async (ctx) => {
 });
 
 controlRoutes(router)
+scheduleRoutes(router)
 
 export default router;
+
+const updateControlsFromSchedule = async () => {
+  Object.values(controls).forEach(async (control) => {
+    const desiredState = await getDesiredControlState(control.name)
+    const currentState = getControlState(control)
+
+    if (desiredState.state !== currentState.state) {
+      setControlState(control, desiredState.state)
+      console.log('Changed state for control', control.name, 'to', desiredState.state)
+    } else {
+      console.log('Desired state', desiredState.state, 'for control', control.name , 'is already set')
+    }
+  })
+} 
+
+setIntervalAsync(async () => {
+  await updateControlsFromSchedule()
+}, 10000)

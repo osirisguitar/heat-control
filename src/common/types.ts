@@ -1,25 +1,39 @@
 interface Control {
   name: string,
-  pin: number
+  pin?: number
 }
 
-enum Status {
+enum State {
   inactive = 0,
   active = 1,
 }
 
-interface ControlStatus {
+interface ControlState {
   control: Control,
-  status: Status
+  state: State
 }
 
 interface ControlList {
   [key: string]: Control
 }
 
+interface Schedule {
+  id?: number,
+  from: string,
+  to: string,
+  state: State
+}
+
+interface ControlSchedule {
+  controlName: string,
+  schedule: Schedule,
+}
+
 export {
   Control,
-  Status,
-  ControlStatus,
+  State,
+  ControlState,
   ControlList,
+  Schedule,
+  ControlSchedule,
 }
