@@ -60,7 +60,7 @@ const initializeDatabase = async () => {
   }
 
   let result = await get('SELECT name FROM sqlite_schema WHERE type=\'table\' AND name=\'control_schedule\';')
-  if (!result) {
+  if (!result || !result[0]) {
     await run('CREATE TABLE control_schedule (control_name TEXT NOT NULL, state INTEGER NOT NULL, from_date TEXT NOT NULL, to_date TEXT NOT NULL)')
     console.log('Created table control_schedule')
   } else {
@@ -68,7 +68,7 @@ const initializeDatabase = async () => {
   }
 
   result = await get('SELECT name FROM sqlite_schema WHERE type=\'table\' AND name=\'state_log\';')
-  if (!result) {
+  if (!result || !result[0]) {
     await run('CREATE TABLE state_log (state_change_date TEXT NOT NULL, control_name TEXT NOT NULL, state INTEGER NOT NULL)')
     console.log('Created table state_log')
   } else {
@@ -76,7 +76,7 @@ const initializeDatabase = async () => {
   }
 
   result = await await get('SELECT name FROM sqlite_schema WHERE type=\'table\' AND name=\'hour_prices\';')
-  if (!result) {
+  if (!result || !result[0]) {
     await run('CREATE TABLE hour_prices (price_date TEXT NOT NULL, price INTEGER NOT NULL)')
     console.log('Created table state_log')
   } else {
