@@ -107,9 +107,15 @@ const getDesiredControlState = async (controlName: string, date?: string) : Prom
 }
 
 const getCurrentAndFutureSchedules = async (controlName: string) => {
-  const results = await get('SELECT rowid, * FROM control_schedule WHERE to_date > datetime(\'now\') and control_name = $control_name ORDER BY from_date', { "$control_name": controlName })
+  const results = await get('SELECT rowid, * FROM control_schedule WHERE to_date > datetime(\'now\', \'localtime\') and control_name = $control_name ORDER BY from_date', { "$control_name": controlName })
 
   return results;
+}
+
+const getSchedule = async(scheduleId: number) => {
+  const results = await get('SELECT rowid, * FROM control_schedule WHERE rowid = $rowid', { '$rowid': scheduleId })
+
+  return results
 }
 
 const insertSchedule = async (schedule: ControlSchedule) => {
@@ -120,6 +126,24 @@ const insertSchedule = async (schedule: ControlSchedule) => {
     $from_date: schedule.schedule.from,
     $to_date: schedule.schedule.to,
   })
+}
+
+const updateSchedule = async (id: Number, schedule: ControlSchedule) => {
+  console.log('updating')
+  await run('UPDATE control_schedule SET control_name = $control_name, state = $state, from_date = $from_date, to_date = $to_date WHERE rowid = $id', 
+  {
+    $control_name: schedule.controlName,
+    $state: schedule.schedule.state,
+    $from_date: schedule.schedule.from,
+    $to_date: schedule.schedule.to,
+    $id: id,
+  })
+
+  console.log('done')
+}
+
+const deleteSchedule = async(scheduleId: number) => {
+  await run('DELETE FROM control_schedule WHERE rowid = $rowid', { '$rowid': scheduleId })
 }
 
 export {
@@ -156,6 +180,66 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 404
       ctx.body = { errorMessage: 'No current state found for control (not even default)' }
     }
+  })
+
+  router.get('/schedule/:control/:scheduleid', async (ctx) => {
+    const { params } = ctx
+    if (!params.control) {
+      ctx.status = 400
+      ctx.body = { errorMessage: 'Missing parameter: control' }
+      return
+    }
+
+    try {
+      const state = await getSchedule(Number(params.scheduleid))
+      console.log(state)
+      ctx.body = { state }  
+    } catch (err) {
+      ctx.status = 404
+      ctx.body = { errorMessage: 'Schedule not found' }
+    }
+  })
+
+  router.delete('/schedule/:control/:scheduleid', async (ctx) => {
+    const { params } = ctx
+    if (!params.control) {
+      ctx.status = 400
+      ctx.body = { errorMessage: 'Missing parameter: control' }
+      return
+    }
+
+    try {
+      await deleteSchedule(Number(params.scheduleid))
+      ctx.status = 204
+    } catch (err) {
+      ctx.status = 404
+      ctx.body = { errorMessage: 'Schedule not found' }
+    }
+  })
+
+  router.post('/schedule/:control/:scheduleid', async (ctx) => {
+    console.log('update schedule')
+    const { params } = ctx
+    if (!params.control) {
+      ctx.status = 400
+      ctx.body = { errorMessage: 'Missing parameter: control' }
+      return
+    }
+
+    const { body } = ctx.request
+
+    const controlSchedule = {
+      controlName: params.control,
+      schedule: {
+        from: body?.from as string,
+        to: body?.to as string,
+        state: body?.state as State,
+      }
+    }
+
+    await updateSchedule(Number(params.scheduleid), controlSchedule)
+
+    ctx.body = { operation: 'ok' }
   })
 
   router.post('/schedule/:control', async (ctx) => {

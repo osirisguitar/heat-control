@@ -28,8 +28,6 @@ const updateControlsFromSchedule = async () => {
     if (desiredState.state !== currentState.state) {
       setControlState(control, desiredState.state)
       console.log('Changed state for control', control.name, 'to', desiredState.state)
-    } else {
-      console.log('Desired state', desiredState.state, 'for control', control.name , 'is already set')
     }
   })
 } 
