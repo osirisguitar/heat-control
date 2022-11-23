@@ -1,7 +1,7 @@
 import KoaRouter from '@koa/router'
 import sqlite3 from 'sqlite3'
 
-import { Control, State, ControlSchedule, ControlState } from '../../common/types'
+import { Control, State, ControlSchedule, ControlState, Schedule } from '../../common/types'
 
 let db : sqlite3.Database
 
@@ -115,7 +115,7 @@ const getCurrentAndFutureSchedules = async (controlName: string) => {
 const getSchedule = async(scheduleId: number) => {
   const results = await get('SELECT rowid, * FROM control_schedule WHERE rowid = $rowid', { '$rowid': scheduleId })
 
-  return results
+  return results[0]
 }
 
 const insertSchedule = async (schedule: ControlSchedule) => {
@@ -129,7 +129,6 @@ const insertSchedule = async (schedule: ControlSchedule) => {
 }
 
 const updateSchedule = async (id: Number, schedule: ControlSchedule) => {
-  console.log('updating')
   await run('UPDATE control_schedule SET control_name = $control_name, state = $state, from_date = $from_date, to_date = $to_date WHERE rowid = $id', 
   {
     $control_name: schedule.controlName,
@@ -138,8 +137,6 @@ const updateSchedule = async (id: Number, schedule: ControlSchedule) => {
     $to_date: schedule.schedule.to,
     $id: id,
   })
-
-  console.log('done')
 }
 
 const deleteSchedule = async(scheduleId: number) => {
@@ -160,7 +157,6 @@ export const routes = (router: KoaRouter) => {
     }
 
     const schedules = await getCurrentAndFutureSchedules(params.control)
-    console.log(schedules)
     ctx.body = schedules
   })
 
@@ -174,7 +170,6 @@ export const routes = (router: KoaRouter) => {
 
     try {
       const state = await getDesiredControlState(params.control)
-      console.log(state)
       ctx.body = { state }  
     } catch (err) {
       ctx.status = 404
@@ -191,9 +186,8 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const state = await getSchedule(Number(params.scheduleid))
-      console.log(state)
-      ctx.body = { state }  
+      const schedule = await getSchedule(Number(params.scheduleid))
+      ctx.body = schedule  
     } catch (err) {
       ctx.status = 404
       ctx.body = { errorMessage: 'Schedule not found' }
@@ -218,7 +212,6 @@ export const routes = (router: KoaRouter) => {
   })
 
   router.post('/schedule/:control/:scheduleid', async (ctx) => {
-    console.log('update schedule')
     const { params } = ctx
     if (!params.control) {
       ctx.status = 400
@@ -226,15 +219,17 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    if (!ctx.request.body) {
+      ctx.status = 400
+      ctx.body = { errorMessage: 'Missing schedule payload' }
+      return
+    }
+
     const { body } = ctx.request
 
     const controlSchedule = {
       controlName: params.control,
-      schedule: {
-        from: body?.from as string,
-        to: body?.to as string,
-        state: body?.state as State,
-      }
+      schedule: body.schedule as Schedule
     }
 
     await updateSchedule(Number(params.scheduleid), controlSchedule)
@@ -250,15 +245,17 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const { body } = ctx.request
+    const { body }  = ctx.request
+
+    if (!body || !body.schedule) {
+      ctx.status = 400
+      ctx.body = { errorMessage: 'Payload is malformed'}
+      return
+    }
 
     const controlSchedule = {
       controlName: params.control,
-      schedule: {
-        from: body?.from as string,
-        to: body?.to as string,
-        state: body?.state as State,
-      }
+      schedule: body.schedule as Schedule
     }
 
     await insertSchedule(controlSchedule)
